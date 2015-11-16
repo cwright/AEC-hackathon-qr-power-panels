@@ -1,0 +1,49 @@
+(ns hello-world.handler
+  (:require [compojure.core :refer :all]
+            [compojure.route :as route]
+            [hiccup.core :as hiccup]
+            [clojure.data.csv :as csv]
+            [ring.middleware.defaults :refer [wrap-defaults site-defaults]]))
+
+(def db 
+  (with-open [in-file (clojure.java.io/reader "resources/revit.csv")]
+    (doall
+     (csv/read-csv in-file))))
+
+
+;just the upstream
+
+(defn upstream [key]
+  (filter (fn [row]
+            (= key (nth row 6)))
+          db))
+
+(defn downstream [key]
+  (filterv (fn [row]
+            (= key (nth row 5)))
+          db))
+
+
+(defroutes app-routes
+  (GET "/" [] "hello")
+      
+;;debug:
+;;  (GET "/" request
+;;   (str request))
+  (GET "/:foo" {{foo :foo} :params}
+       
+       (hiccup/html
+        [:html
+         [:body
+          [:h1 {:class "title"}
+           (str "Upstream components for " foo ":" (first (upstream foo)))]]]))
+  
+  
+  (route/not-found "Not Found")
+  (route/resources "/"))
+
+
+(def app
+  (wrap-defaults app-routes site-defaults))
+
+
